@@ -25,7 +25,7 @@ export class RaydiumSwap {
     private readonly walletPublicKey: PublicKey) {
 
     // https://api.raydium.io/v2/sdk/liquidity/mainnet.json
-    this.loadPoolKeys('./markets/raydium.json')
+    // this.loadPoolKeys('./markets/raydium.json')
   }
 
   async loadPoolKeys(liquidityFile: string) {
@@ -45,6 +45,8 @@ export class RaydiumSwap {
     )
 
     if (!poolData) return null
+
+    logger.debug(JSON.stringify(poolData))
 
     return jsonInfo2PoolKeys(poolData) as LiquidityPoolKeys
   }
@@ -66,16 +68,17 @@ export class RaydiumSwap {
     // fromToken: string,
     amount: number,
     slippage: number,
-    poolKeys: LiquidityPoolKeys,
+    lp: LiquidityPoolKeys | { id: string },
     maxLamports: number = 100000,
     fixedSide: 'in' | 'out' = 'in',
     recentBlockhashForSwap: BlockhashWithExpiryBlockHeight
   ): Promise<VersionedTransaction> {
+    const poolKeys = (typeof lp.id !== 'string' ? lp : jsonInfo2PoolKeys(lp)) as LiquidityPoolKeys
     const directionIn = poolKeys.quoteMint.toString() == toToken
     const slippagePercent = new Percent(slippage, 100) // slippage % 
     const { minAmountOut, amountIn } = await this.calcAmountOut(poolKeys, amount, slippagePercent, directionIn)
-    logger.debug("amountIn:     %s, %s", amountIn.toFixed(), amountIn.token.symbol)
-    logger.debug("minAmountOut: %s, %s", minAmountOut.toFixed(), minAmountOut.currency.symbol)
+    logger.debug("amountIn:     %s, %s", amountIn.toFixed(), amountIn.token.symbol || '')
+    logger.debug("minAmountOut: %s, %s", minAmountOut.toFixed(), minAmountOut.currency.symbol || '')
     const userTokenAccounts = await this.getOwnerTokenAccounts()
     const swapTransaction = await Liquidity.makeSwapInstructionSimple({
       connection: this.connection,

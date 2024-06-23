@@ -6,7 +6,7 @@ import {
   Connection,
   TransactionMessage,
   VersionedTransaction,
-} from '@solana/web3.js' 
+} from '@solana/web3.js'
 import axios, { AxiosError } from 'axios'
 import bs58 from 'bs58'
 import { Currency, CurrencyAmount } from '@raydium-io/raydium-sdk'
@@ -69,7 +69,10 @@ export class JitoTransactionExecutor implements TransactionExecutor {
       const jitoFeeTx = new VersionedTransaction(jitTipTxFeeMessage)
       jitoFeeTx.sign([payer])
 
+      const swapTxsignature = bs58.encode(transaction.signatures[0])
       const jitoTxsignature = bs58.encode(jitoFeeTx.signatures[0])
+      logger.debug(`swap hash: ${swapTxsignature}`)
+      logger.debug(`jito hash: ${jitoTxsignature}`)
 
       // Serialize the transactions once here
       const serializedTransaction = bs58.encode(transaction.serialize())
@@ -105,17 +108,24 @@ export class JitoTransactionExecutor implements TransactionExecutor {
         '
       `)
 
+      const data = {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'sendBundle',
+        params: [serializedTransactions],
+      }
       const requests = endpoints.map((url) =>
-        axios.post(url, {
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'sendBundle',
-          params: [serializedTransactions],
-        }, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }),
+        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        // axios.post(url, {
+        //   jsonrpc: '2.0',
+        //   id: 1,
+        //   method: 'sendBundle',
+        //   params: [serializedTransactions],
+        // }, {
+        //   headers: {
+        //     'Content-Type': 'application/json'
+        //   }
+        // }),
       )
 
       logger.trace('Sending transactions to endpoints...')
@@ -126,13 +136,14 @@ export class JitoTransactionExecutor implements TransactionExecutor {
       if (successfulResults.length > 0) {
         logger.trace(`At least one successful response`)
         logger.debug(`Confirming jito transaction...`)
-        logger.info(`jito res: ${JSON.stringify(successfulResults[0], null, 2)}`)
-        // const bundleId = successfulResults[0].json().data.result
-        // https://explorer.jito.wtf/bundle/{bundleId}
+        const res = await successfulResults[0].json()
+        logger.info(res, `jito res:`)
+        const bundleId = res?.result
+        logger.debug(`https://explorer.jito.wtf/bundle/${bundleId}`)
 
         return await this.confirm(jitoTxsignature, latestBlockhash)
       } else {
-        logger.debug(`No successful responses received for jito`) 
+        logger.debug(`No successful responses received for jito`)
         logger.error(results[0])
       }
 
