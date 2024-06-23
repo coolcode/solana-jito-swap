@@ -126,7 +126,9 @@ export class JitoTransactionExecutor implements TransactionExecutor {
       if (successfulResults.length > 0) {
         logger.trace(`At least one successful response`)
         logger.debug(`Confirming jito transaction...`)
-        logger.info(`results: ${JSON.stringify(successfulResults, null, 2)}`)
+        logger.info(`jito res: ${JSON.stringify(successfulResults[0], null, 2)}`)
+        // const bundleId = successfulResults[0].json().data.result
+        // https://explorer.jito.wtf/bundle/{bundleId}
 
         return await this.confirm(jitoTxsignature, latestBlockhash)
       } else {
