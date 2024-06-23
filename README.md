@@ -7,7 +7,8 @@ This project is dedicated to protecting Solana transactions from MEV bots.
 1. Download raydium's liqudity file:
 
 ```sh
-wget https://api.raydium.io/v2/sdk/liquidity/mainnet.json ./markets/raydium.json
+mkdir markets
+curl https://api.raydium.io/v2/sdk/liquidity/mainnet.json -o ./markets/raydium.json
 ```
 
 2. Create .env file
